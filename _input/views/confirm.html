@@ -1,0 +1,63 @@
+<form class="auth-form text-center">
+	<h1 class="h3 mb-3 font-weight-normal">Confirming your email</h1>
+	<div class="loader"></div>
+</form>
+
+<script>
+
+//
+//	1.	Get Query URL and remove the first char which is a question mark
+//
+var search = location.search.substring(1);
+
+//
+//	2.	Convert the String in to a JSON String.
+//
+var json = '{"' + decodeURI(search).replace(/"/g, '\\"')
+								   .replace(/&/g, '","')
+								   .replace(/=/g,'":"') + '"}';
+
+//
+//	3.	Convert the JSON string in to a JS Object
+//
+var url_query = JSON.parse(json)
+
+//
+//	4.	Create a user pool based on the user confirming the URL
+//
+var cognitoUser = new AmazonCognitoIdentity.CognitoUser({
+	Username : url_query.username,
+	Pool : userPool
+});
+
+//
+//	5.	Confirm the registration with the code that we got from the URL
+//
+cognitoUser.confirmRegistration(url_query.code, true, function(error, result) {
+
+    //
+	//	1.	Check if there was an internal error
+	//
+	if(error)
+	{
+		console.log(error);
+		return;
+	}
+
+    console.log('call result: ' + result);
+
+    //
+    //	2.	Set a small delay to make the experience feel more solid.
+    //
+    setTimeout(function() {
+
+	    //
+		//	1.	Redirect the user to the home page
+		//
+		window.location.replace('/');
+
+	}, 1000);
+
+});
+
+</script>

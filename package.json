@@ -1,0 +1,29 @@
+{
+  "name": "access.retireryte.com",
+  "version": "1.0.0",
+  "description": "This pages is used to create, and manage user access",
+  "main": "index.js",
+  "scripts": {
+    "build": "avocado -s .",
+    "test": "mocha",
+    "test-x": "xvfb-run mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://davidgatti@github.com/Retireryte/access.retireryte.com.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Retireryte/access.retireryte.com/issues"
+  },
+  "homepage": "https://github.com/Retireryte/access.retireryte.com#readme",
+  "dependencies": {
+    "@0x4447/avocado": "1.4.3"
+  },
+  "devDependencies": {
+    "chai": "^4.1.2",
+    "mocha": "^5.2.0",
+    "nightmare": "^3.0.1"
+  }
+}

@@ -1,0 +1,93 @@
+<html lang="en">
+	<head>
+
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+		<meta name="keywords" content="Retireryte">
+
+		<link rel="apple-touch-icon" sizes="180x180" href="./assets/favicons/apple-touch-icon.png">
+		<link rel="icon" type="image/png" sizes="32x32" href="./assets/favicons/favicon-32x32.png">
+		<link rel="icon" type="image/png" sizes="16x16" href="./assets/favicons/favicon-16x16.png">
+		<link rel="mask-icon" href="./assets/favicons/safari-pinned-tab.svg" color="#807a00">
+		<meta name="apple-mobile-web-app-title" content="Retireryte">
+		<meta name="application-name" content="Retireryte">
+		<meta name="msapplication-TileColor" content="#ffc40d">
+		<meta name="msapplication-TileImage" content="./assets/favicons/mstile-144x144.png">
+		<meta name="msapplication-config" content="./assets/favicons/browserconfig.xml">
+		<meta name="theme-color" content="#ffffff">
+
+		<title>{{ title }}</title>
+		<meta name="description" content="{{ description }}">
+
+		<link rel="stylesheet" href="./assets/css/bootstrap.min.css">
+		<link rel="stylesheet" href="./assets/css/main.css">
+
+		<script src="./assets/js/jquery-3.2.1.slim.min.js"></script>
+		<script src="./assets/js/amazon-cognito-identity.min.js"></script>
+		<script src="./assets/js/aws-sdk-2.274.1.min.js"></script>
+		<script src="./assets/js/public-suffix-list.min.js"></script>
+
+		<script>
+
+			//
+			//	Extract all the necessary information from the browser URL.
+			//
+			var parsed_url = psl.parse(window.location.hostname);
+
+			//
+			//	Save the root domain of the URL so we can use it for our
+			//	cookies.
+			//
+			var cookie_domain = parsed_url.domain;
+
+			//
+			//	Create the User Pool for any page the user visits, and use the
+			//	Cookie storage, since the dashboard is located at another address
+			//	but still in the same domain.
+			//
+			var userPool = new AmazonCognitoIdentity.CognitoUserPool({
+				UserPoolId: 'us-east-1_1qg7uCcA9',
+				ClientId: '563mr6cn591t1nficb4hobdkth',
+				Storage: new AmazonCognitoIdentity.CookieStorage({
+					domain: "." + cookie_domain
+				})
+			});
+
+			//
+			//	A list of all the potential URL a user can be redirected ot
+			//
+			var urls = {
+				advisor: 'https://advisor.' + cookie_domain,
+				investor: 'https://investor.' + cookie_domain,
+				seller: 'https://seller.' + cookie_domain,
+				admin: 'https://admin.' + cookie_domain
+			};
+
+		</script>
+
+	</head>
+
+	<body>
+
+		<main class="auth">
+			<header id="auth-header" class="auth-header" style="background-image: url(assets/img/auth-img.png);">
+
+				<h1>
+					<img src="assets/img/logo.jpg" alt="" height="72">
+					<span class="sr-only">Sign In</span>
+				</h1>
+
+			</header>
+
+			{{>body}}
+
+			<footer class="auth-footer">&copy; 2018 All Rights Reserved.
+				<a href="privacy.html">Privacy</a> and
+				<a href="terms.html">Terms</a>
+			</footer>
+
+		</main>
+
+	</body>
+
+</html>

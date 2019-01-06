@@ -1,0 +1,447 @@
+<style>
+	.spinner{
+		top: 35%;
+	}
+</style>
+
+<form class="auth-form">
+	<div class="spinner-overlay" style="display: none">
+		<div class="spinner">Loading...</div>
+	</div>
+
+	<div id="header_reset" class="hide-header text-center">
+		<h5>Change your temporary password</h5>
+	</div>
+
+	<div id="error_banner" class="alert alert-danger d-none invisible" role="alert">
+		Username or Password is wrong.
+	</div>
+
+	<div class="form-group">
+		<div class="form-label-group">
+			<input type="email" id="inputUsername" class="form-control" placeholder="Email" autocomplete="email" oninvalid="this.setCustomValidity('Please enter valid email address')" oninput="setCustomValidity('');hideErrorMessage();" maxlength="50" required autofocus>
+			<label for="inputUsername">Email</label>
+		</div>
+	</div>
+
+	<div class="form-group" id="passwordGroup">
+		<div class="form-label-group">
+			<input type="password" id="inputPassword" class="form-control" placeholder="Password" autocomplete="current-password" pattern=".{8,}" title="It should have atleast 8 characters" oninvalid="this.setCustomValidity('Please enter valid password')" oninput="setCustomValidity('');hideErrorMessage();" maxlength="255" required>
+			<label for="inputPassword">Password</label>
+		</div>
+	</div>
+
+	<div class="form-group">
+		<button id="signin" class="btn btn-lg btn-primary btn-block" type="submit">Sign In</button>
+	</div>
+
+	<div class="text-center" id="option-links">
+		<div class="create-account">
+			<p>Don't have an account?
+				<a class="link" href="account_type.html">Create One</a>
+			</p>
+		</div>
+		<a href="reset_password.html" id="reset" class="link">Password reset</a>
+	</div>
+
+</form>
+
+<script>
+	// $('#header_reset').show();
+	// 			$('#option-links').hide();
+	// 			$('#passwordGroup').find('label').text("Temporary Password");
+	// 			$('#passwordGroup').after('<div class="form-group"><div class="form-label-group"><input type="password" id="new_password" class="form-control" placeholder="New Password" autocomplete="new-password" required><label for="new_password">New Password</label></div></div>');
+	// 			$('#signin').text("Set New Password");
+	//
+	//	Create the user based on Session saved in the browser
+	//
+	var cognitoUser = userPool.getCurrentUser();
+
+	//
+	//	Check if the Cognito user object is not NULL.
+	//
+	if(cognitoUser)
+	{
+		//
+		//	Call a secret function (undocumented) that adds missing
+		//	information to the Cognito user object which is not added
+		//	by the official .getCurrentUser() function
+		//
+		cognitoUser.getCachedDeviceKeyAndPassword();
+
+		//
+		//	Build out the Cognito User from the data stored in the
+		//	browser
+		//
+		cognitoUser.getSession(function (error, result) {
+
+			//
+			//	1.	Check if there was an internal error
+			//
+			if(error)
+			{
+				console.error(error);
+			}
+
+			//
+			//	2.	Get the user attributes so we can check what type
+			//		of user logged in this way we can redirect it to
+			//		the right page.
+			//
+			cognitoUser.getUserAttributes(function (error, result) {
+
+				//
+				//	1.	Check if there was an internal error
+				//
+				if(error)
+				{
+					return console.error(error);
+				}
+
+				//
+				//	2.	Loop over all attributes
+				//
+				for(i = 0; i < result.length; i++)
+				{
+					//
+					//	1. 	Look for the group attribute which tells
+					//		us, to which page the user belongs to.
+					//
+					if(result[i].getName() == 'custom:group') 
+					{
+						//
+						//	1.	Get the URL from the array of possible
+						//		options.
+						//
+						let url = urls[result[i].getValue()];
+
+						//
+						//	->	Redirect to the Dashboard
+						//
+						window.location.replace(url);
+					}
+				}
+
+			});
+		});
+	}
+
+	//
+	//	<<>	React when the user wants to log in.
+	//
+	$('form').on("submit", function (event) {
+
+		//
+		//	1.	
+		//
+		if ($('#signin').text() != "Set New Password") {
+			$('#header_reset').hide();
+			$('#option-links').show();
+		}
+		//
+		//	2.	Start the loader
+		//
+		$('.spinner-overlay').show();
+
+		//
+		//	3.	Prevent the default form action so we can process the action
+		//		our way.
+		//
+		event.preventDefault();
+
+		//
+		//	4.	By default we assume there was an error and we remove it
+		//		before we move forward to give a slight animation that
+		//		to show that the error was removed and re-added.
+		//
+		hideErrorMessage();
+		$('#inputUsername').removeClass('is-invalid');
+		$('#inputPassword').removeClass('is-invalid');
+
+		//
+		//	5.	Get the user inputs
+		//
+		var totp = $('#totp').val();
+		var username = $('#inputUsername').val();
+		var password = $('#inputPassword').val();
+		var new_password = $('#new_password').val();
+
+		//
+		//	6.	Create a Cognito Authentication detail object.
+		//
+		var authenticationDetails = new AmazonCognitoIdentity.AuthenticationDetails({
+			Username: username,
+			Password: password,
+		});
+
+		//
+		//	7.	Create a Cognito User based on the provided data.
+		//
+		var cognitoUser = new AmazonCognitoIdentity.CognitoUser({
+			Username: username,
+			Pool: userPool,
+			Storage: new AmazonCognitoIdentity.CookieStorage({
+				domain: "." + cookie_domain
+			})
+		});
+
+		//
+		//	8.	With everything that we got, try to Authenticate the user.
+		//
+		cognitoUser.authenticateUser(authenticationDetails, {
+			onSuccess: on_success,
+			onFailure: on_failure,
+			newPasswordRequired: new_password_required,
+			totpRequired: totp
+		});
+
+		//	 _    _   ______   _        _____    ______   _____     _____
+		//	| |  | | |  ____| | |      |  __ \  |  ____| |  __ \   / ____|
+		//	| |__| | | |__    | |      | |__) | | |__    | |__) | | (___
+		//	|  __  | |  __|   | |      |  ___/  |  __|   |  _  /   \___ \
+		//	| |  | | | |____  | |____  | |      | |____  | | \ \   ____) |
+		//	|_|  |_| |______| |______| |_|      |______| |_|  \_\ |_____/
+		//
+
+		//
+		//	React when Cognito say that everything is ok.
+		//
+		function on_success(result) {
+
+			//
+			//	1.	Stop the spinner
+			//
+			$('.spinner-overlay').hide();
+
+			//
+			//	2.	Get User credentials from local storage
+			//
+			cognitoUser.getCachedDeviceKeyAndPassword();
+
+			//
+			//	3.	Check if the devices like the browser is remembered or not
+			//
+			cognitoUser.getDevice({
+				onSuccess: function (device) {
+
+					//
+					//	1.	Get the user attributes so we can check what type of
+					//		user logged in this way we can redirect it to the
+					//		right page.
+					//
+					cognitoUser.getUserAttributes(function (error, result) {
+
+						//
+						//	1.	Check if there was an internal error
+						//
+						if(error)
+						{
+							return console.error(error);
+						}
+
+						//
+						//	2.	Loop over all attributes
+						//
+						for(i = 0; i < result.length; i++)
+						{
+							//
+							//	1. 	Look for the group attribute which tells
+							//		us, to which page the user belongs to.
+							//
+							if (result[i].getName() == 'custom:group')
+							{
+								//
+								//	1.	Get the URL from the array of possible
+								//		options.
+								//
+								let url = urls[result[i].getValue()];
+
+								//
+								//	->	Redirect to the Dashboard
+								//
+								window.location.replace(url);
+							}
+						}
+
+					});
+
+				},
+				onFailure: function(device_error) {
+
+					//
+					//	->	Redirect the user to the the page where they get to
+					//		decide if they want to remember the device they are
+					//		on or not.
+					//
+					window.location.replace('/remember');
+
+				}
+			});
+		}
+
+		//	 _    _   ______   _        _____    ______   _____     _____
+		//	| |  | | |  ____| | |      |  __ \  |  ____| |  __ \   / ____|
+		//	| |__| | | |__    | |      | |__) | | |__    | |__) | | (___
+		//	|  __  | |  __|   | |      |  ___/  |  __|   |  _  /   \___ \
+		//	| |  | | | |____  | |____  | |      | |____  | | \ \   ____) |
+		//	|_|  |_| |______| |______| |_|      |______| |_|  \_\ |_____/
+		//
+
+		//
+		//	React when Cognito encounters an error.
+		//
+		function on_failure(error)
+		{
+			//
+			//	<>> For Debug
+			//
+			console.error(error);
+
+			//
+			//	1.	Stop the spinner
+			//
+			$('.spinner-overlay').hide();
+
+			//
+			//	2.	Cognito dose not give consistent error messages, so we
+			//		we need to double check that we have what we need.
+			//
+			if(error.code)
+			{
+				//
+				//	1.	Check if the error is about the user not having
+				//		confirmed his or her email yet.
+				//
+				if(error.code == "UserNotConfirmedException")
+				{
+					$('#error_banner')
+						.text("You didn't confirm your email yet.");
+				}
+
+				//
+				//	2.	Display the error message to the user
+				//
+				$('.alert').removeClass('invisible')
+						   .removeClass('d-none')
+						   .addClass('visible');
+
+				//
+				//	3.	Enable the CSS representing an error.
+				//
+				$('#inputUsername').addClass('is-invalid');
+				$('#inputPassword').addClass('is-invalid');
+
+				//
+				//	->	Stop the execution so we don't redirect the user to
+				//		the general error message
+				//
+				return;
+			}
+
+			//
+			//	3.	Redirect the user to the general error message.
+			//
+			return window.location.replace('/message_error');
+		}
+
+		//
+		//	React when Cognito tels us that the password was temporary, and
+		//	allow the user to set the new password
+		//
+		function new_password_required(userAttributes, requiredAttributes) {
+
+			//
+			//	1.	Stop the spinner
+			//
+			$('.spinner-overlay').hide();
+
+			//
+			//	2.	If the form had no new password input field, we have to
+			//		add the field to let the user type the new password.
+			//
+			if (!new_password) {
+				$('#header_reset').show();
+				$('#option-links').hide();
+				$('#passwordGroup').find('label').text("Temporary Password");
+				$('#passwordGroup').after('<div class="form-group"><div class="form-label-group"><input type="password" id="new_password" class="form-control" placeholder="New Password" autocomplete="new-password" required><label for="new_password">New Password</label></div></div>');
+				$('#signin').text("Set New Password");
+			}
+
+			//
+			//	3.	If we have the new password thanks to the correct input
+			//		field, then we can use this information to change the password.
+			//
+			if(new_password)
+			{
+				//
+				//	1.	Set the options that is expected
+				//
+				let options = {
+					email: userAttributes.email
+				};
+
+				//
+				//	2.	Set the new password
+				//
+				cognitoUser.completeNewPasswordChallenge(new_password, options, this);
+			}
+
+		}
+
+		//
+		//	React when Cognito tels us that we need to pass the TOTP code, and
+		//	change the UI to allow the user to input the TOTP code
+		//
+		function totp(codeDeliveryDetails) {
+
+			//
+			//	1.	Stop the spinner
+			//
+			$('.spinner-overlay').hide();
+
+			//
+			//	2.	If the form had no new password input field, we have to
+			//		add the field to let the user type the new password.
+			//
+			if(!totp)
+			{
+				$('#passwordGroup').after('<div class="form-group"><div class="form-label-group"><input type="password" id="totp" class="form-control" placeholder="TOTP" autocomplete="totp" required><label for="totp">TOTP</label></div></div>');
+				$('#signin').text("Send TOTP Code");
+			}
+
+			//
+			//	3.	If the form had no new password input field, we have to
+			//		add the field to let the user type the new password.
+			//
+			if(totp)
+			{
+				//
+				//	1.	Send the code to Cognito and use this context to handle
+				//		the COgnito reply. Meaning the response will either
+				//		trigger the success or failure function, located in this
+				//		file.
+				//
+				cognitoUser.sendMFACode(totp, this, 'SOFTWARE_TOKEN_MFA');
+			}
+
+		}
+
+	});
+
+	//	 ______  _    _  _   _   _____  _______  _____  ____   _   _   _____
+	//	|  ____|| |  | || \ | | / ____||__   __||_   _|/ __ \ | \ | | / ____|
+	//	| |__   | |  | ||  \| || |        | |     | | | |  | ||  \| || (___
+	//	|  __|  | |  | || . ` || |        | |     | | | |  | || . ` | \___ \
+	//	| |     | |__| || |\  || |____    | |    _| |_| |__| || |\  | ____) |
+	//	|_|      \____/ |_| \_| \_____|   |_|   |_____|\____/ |_| \_||_____/
+	//
+
+	//
+	//	This function removes error message of wrong username & password from
+	//	login page
+	//
+	function hideErrorMessage() {
+		$('.alert').removeClass('visible').addClass('d-none invisible');
+	}
+
+</script>

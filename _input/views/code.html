@@ -1,0 +1,115 @@
+<style>
+	.spinner{
+		top: 25%;
+	}
+</style>
+<form class="auth-form">
+	<div class="spinner-overlay" style="display: none">
+		<div class="spinner">Loading...</div>
+	</div>
+
+	<div class="form-group">
+		<div class="form-label-group">
+			<input type="password" id="password" class="form-control" placeholder="New Password" autocomplete="new-password" oninvalid="this.setCustomValidity('Please enter valid password')" oninput="setCustomValidity('')" maxlength="255" pattern=".{8,}" title="It should have atleast 8 characters" required>
+			<label for="password">New Password</label>
+		</div>
+	</div>
+
+	<div class="form-group">
+		<button class="btn btn-lg btn-primary btn-block" type="submit">Save</button>
+	</div>
+
+</form>
+
+<script>
+	
+	//
+	//	1.	Get Query URL and remove the first char which is a question mark
+	//
+	var search = location.search.substring(1);
+
+	//
+	//	2.	Convert the String in to a JSON String.
+	//
+	var json = '{"' + decodeURI(search).replace(/"/g, '\\"')
+		.replace(/&/g, '","')
+		.replace(/=/g, '":"') + '"}';
+
+	//
+	//	3.	Convert the JSON string in to a JS Object
+	//
+	var url_query = JSON.parse(json)
+
+	//
+	//	<<>	React when the user wants to change their password
+	//
+	$('form').on("submit", function (event) {
+
+		//
+		//	1.	Start the loader
+		//
+		$('.spinner-overlay').show();
+
+		//
+		//	2.	Prevent the default form action so we can process the action
+		//		our way
+		//
+		event.preventDefault();
+
+		//
+		//	3.	Get the form data
+		//
+		var password = $('#password').val();
+
+		//
+		//	4.	Create a User based on all the data
+		//
+		var cognitoUser = new AmazonCognitoIdentity.CognitoUser({
+			Username: url_query.username,
+			Pool: userPool,
+			Storage: new AmazonCognitoIdentity.CookieStorage({
+				domain: cookie_domain
+			})
+		});
+
+		//
+		//	5.	Get the attributes of the partially logged in user
+		//
+		cognitoUser.confirmPassword(url_query.code, password, {
+			onSuccess: on_success,
+			onFailure: on_failure
+		});
+
+		//
+		//	6.	React when Cognito say that everything is ok
+		//
+		function on_success(result) {
+
+			//
+			//	1.	Stop the spinner
+			//
+			$('.spinner-overlay').hide();
+
+			//
+			//	->	Redirect to the Dashboard
+			//
+			window.location.replace('/');
+		}
+
+		//
+		//	5.	React when Cognito encounters an error
+		//
+		function on_failure(error) {
+
+			//
+			//	1.	Stop the spinner
+			//
+			$('.spinner-overlay').hide();
+
+			console.log(error);
+		}
+
+	}); // ON submit
+
+
+</script>

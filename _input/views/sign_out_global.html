@@ -1,0 +1,24 @@
+<script>
+
+	//	1.
+	//		Create the user based on the information that is saved
+	//
+	var cognitoUser = userPool.getCurrentUser();
+
+	//	2.
+	//		Check if there was a User logged in.
+	//
+	if(cognitoUser)
+	{
+		//	1.
+		//		Sing out the active user
+		//
+		cognitoUser.globalSignOut();
+	}
+
+	//
+	//	->	Redirect the user to the login page
+	//
+	window.location.replace('/');
+
+</script>

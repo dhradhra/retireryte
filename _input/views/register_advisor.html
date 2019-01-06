@@ -1,0 +1,294 @@
+<form class="auth-form">
+
+	<div class="spinner-overlay" style="display: none;">
+		<div class="spinner">Loading...</div>
+	</div>
+
+	<div class="form-group">
+		<div id="error_banner" class="alert alert-danger d-none invisible" role="alert">
+			Something went wrong.
+		</div>
+	</div>
+
+	<div class="form-group">
+		<div class="form-label-group">
+			<input type="text" id="first_name" class="form-control" placeholder="First Name" autocomplete="first_name" oninvalid="this.setCustomValidity('Please enter first name')" oninput="setCustomValidity('')" maxlength="255" pattern=".*\S+.*" title="Please enter first name" required autofocus>
+			<label for="first_name">First Name</label>
+		</div>
+	</div>
+
+	<div class="form-group">
+		<div class="form-label-group">
+			<input type="text" id="last_name" class="form-control" placeholder="Last Name" autocomplete="last_name" oninvalid="this.setCustomValidity('Please enter last name')" oninput="setCustomValidity('')" maxlength="255" pattern=".*\S+.*" title="Please enter last name" required>
+			<label for="last_name">Last Name</label>
+		</div>
+	</div>
+
+	<div class="form-group">
+		<div class="form-label-group">
+			<input type="email" id="email" class="form-control" placeholder="Email" autocomplete="off" oninvalid="this.setCustomValidity('Please enter valid email address')" oninput="setCustomValidity('')" maxlength="50" pattern=".*\S+.*" title="Please enter valid email address" required>
+			<label for="email">Email</label>
+		</div>
+	</div>
+
+	<div class="form-group">
+		<div class="form-label-group">
+			<input type="password" id="password" class="form-control" placeholder="New Password" autocomplete="new-password" oninvalid="this.setCustomValidity('Please enter valid password (It should have atleast 8 characters without any white space)')" oninput="setCustomValidity('')" maxlength="255" pattern="^(?:[.*\S+.*]{8,})$" title="It should have atleast 8 characters without any white space" required>
+			<label for="password">New Password</label>
+		</div>
+	</div>
+
+	<div class="form-group">
+		<div class="custom-control custom-control-inline custom-checkbox">
+			<input type="checkbox" class="custom-control-input" id="certification" value="certification" oninvalid="this.setCustomValidity('Please certify that you are a registered financial professional.')" oninput="setCustomValidity('')" required>
+			<label class="custom-control-label pointer-cursor" for="certification">I certify that I'm a registered financial professional.</label>
+		</div>
+	</div>
+
+	<div class="form-group">
+		<button class="btn btn-lg btn-primary btn-block" type="submit">Create</button>
+	</div>
+
+	<div class="text-center pt-3">
+		<a href="javascript:history.back()" class="link">Back</a>
+	</div>
+
+</form>
+
+<script>
+
+//
+//	Parse the URL for queries
+//
+let query = parse_url(window.location.href);
+
+//
+//	Create a variable that let us know if the user was invited or not.
+//	and by default we assume that he or she is not.
+//
+var is_invited = 'false';
+
+//
+//	Check if we got an email in the URL and update the flag.
+//
+if(query.email)
+{
+	//
+	//	1.	Switch the flag
+	//
+	is_invited = 'true';
+
+	//
+	//	2.	Auto populate the email for the user
+	//
+	$('#email').val(query.email);
+}
+
+//
+//	<<>	React when the user wants to create an account
+//
+$('form').on("submit", function (event) {
+
+	//
+	//	1.	Start the loader
+	//
+	$('.spinner-overlay').show();
+
+	//
+	//	2.	Prevent the default form action so we can process the action
+	//		our way
+	//
+	event.preventDefault();
+
+	//
+	//	3.	Get the form data
+	//
+	var email 		= $('#email').val();
+	var password 	= $('#password').val();
+	var first_name 	= $('#first_name').val();
+	var last_name 	= $('#last_name').val();
+
+	//
+	//	4.	Prepare an array that will hold all the user attributes
+	//
+	var attributeList = [];
+
+	//
+	//	5.	AWS Requires to wrap the JS Object holding the user attributes
+	//		in to an object with getters and setters.
+	//
+	//		Makes no sense, but this is how the decided to go about it.
+	//
+	var attribute_email = new AmazonCognitoIdentity.CognitoUserAttribute({
+		Name: 'email',
+		Value: email
+	});
+
+	//
+	//	6. Add user to group
+	//
+	var attribute_group = new AmazonCognitoIdentity.CognitoUserAttribute({
+		Name: 'custom:group',
+		Value: 'advisor'
+	});
+
+	//
+	//	<>	Why are we using Custom Attributes, instead of using the
+	//		the default ones? Because once you set the default one
+	//		you can't change it. Meaning if in the future you'd like to
+	//		add a middle name, you can't update the user Pool of this new
+	//		type of information.
+	//
+	//		Custom Attributes on the other hand can be added at will.
+	//
+
+	//
+	//	7.	Add First Name
+	//
+	var attribute_first_name = new AmazonCognitoIdentity.CognitoUserAttribute({
+		Name: 'custom:first_name',
+		Value: first_name
+	});
+
+	//
+	//	8.	Add Last Name
+	//
+	var attribute_last_name = new AmazonCognitoIdentity.CognitoUserAttribute({
+		Name: 'custom:last_name',
+		Value: last_name
+	});
+
+	//
+	//	9.	Add the converted attributes to our Array.
+	//
+	attributeList.push(attribute_email);
+	attributeList.push(attribute_group);
+	attributeList.push(attribute_first_name);
+	attributeList.push(attribute_last_name);
+
+	//
+	//	10.	Sing up the user with the provided information
+	//
+	userPool.signUp(email, password, attributeList, null, function (error, result) {
+
+		//
+		//	1.	Stop the spinner
+		//
+		$('.spinner-overlay').hide();
+
+		//
+		//	2.	Check if there was an internal error
+		//
+		if(error)
+		{
+			//
+			//	1.	Cognito dose not give consistent error messages, so we
+			//		we need to double check that we have what we need.
+			//
+			if(error.code)
+			{
+				//
+				//	1.	Check if the error is about the user not having
+				//		confirmed his or her email yet.
+				//
+				if(error.code == "UsernameExistsException")
+				{
+					$('#error_banner')
+						.text("An account with the given email already exists.");
+				}
+
+				//
+				//	2.	Display the error message to the user
+				//
+				$('.alert').removeClass('invisible')
+						   .removeClass('d-none')
+						   .addClass('visible');
+
+				//
+				//	3.	Enable the CSS representing an error.
+				//
+				$('#email').addClass('is-invalid');
+
+				//
+				//	->	Stop the execution so we don't redirect the user to
+				//		the general error message
+				//
+				return;
+			}
+
+			//
+			//	2.	Redirect the user to the general error message.
+			//
+			return window.location.replace('/message_error');
+		}
+
+		//
+		//	3.	Redirect the user to the message page.
+		//
+		window.location.replace('/message_registration');
+
+	});
+
+});
+
+//	 ______  _    _  _   _   _____  _______  _____  ____   _   _   _____
+//	|  ____|| |  | || \ | | / ____||__   __||_   _|/ __ \ | \ | | / ____|
+//	| |__   | |  | ||  \| || |        | |     | | | |  | ||  \| || (___
+//	|  __|  | |  | || . ` || |        | |     | | | |  | || . ` | \___ \
+//	| |     | |__| || |\  || |____    | |    _| |_| |__| || |\  | ____) |
+//	|_|      \____/ |_| \_| \_____|   |_|   |_____|\____/ |_| \_||_____/
+//
+
+//
+//	This function parses the URL to extract all the queries parameters in it.
+//
+function parse_url(url)
+{
+	//
+	//	1.	Split the sting in two peaces, on the left you get the URL. One
+	//		the right you get a new string with all the queries.
+	//
+	var left_right = url.split('?')
+
+	//
+	//	2.	Create the JS object that will hold all the queries
+	//
+	var queries = {};
+
+	//
+	//	3.	Check if we have the right side, meaning the query part of the URL
+	//
+	if(left_right[1])
+	{
+		//
+		//	1.	Take the string from the right side and split it again
+		//		to get the individual queries.
+		//
+		var query = left_right[1].split('&')
+
+		//
+		//	2.	Loop over the individual quires to get to the data that we care
+		//		about.
+		//
+		for(var i = 0; i < query.length; i++)
+		{
+			//
+			//	1.	Split in the middle of the query to get the key and the
+			//		value
+			//
+			var data = query[i].split('=');
+
+			//
+			//	2.	Save what we got in to the JS object
+			//
+			queries[data[0]] = data[1];
+		}
+	}
+
+	//
+	//	->	Return organized object.
+	//
+	return queries;
+}
+
+</script>

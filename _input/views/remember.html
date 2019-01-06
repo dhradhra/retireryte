@@ -1,0 +1,223 @@
+<style>
+	.spinner{
+		top: 25%;
+	}
+</style>
+<form class="auth-form">
+	<div class="spinner-overlay" style="display: none">
+		<div class="spinner">Loading...</div>
+	</div>
+
+	<h3><center>Do you trust this browser?</center></h3>
+
+	<p>
+		<div class="form-group">
+			<button id="remember" class="btn btn-lg btn-success btn-block">I Do</button>
+			<button id="dont" class="btn btn-lg btn-warning btn-block">I Don't</button>
+		</div>
+	</p>
+
+</form>
+
+<script>
+
+	//
+	//	Create the user based on Session saved in the browser.
+	//
+	var cognitoUser = userPool.getCurrentUser();
+
+	//
+	//	Call a secret function (undocumented) that adds missing information to
+	//	the Cognito user object which is not added by the official
+	//	.getCurrentUser() function.
+	//
+	cognitoUser.getCachedDeviceKeyAndPassword();
+
+	//
+	//	Remember the device.
+	//
+	$('#remember').click(function () {
+
+		//
+		//	1.	Start the loader.
+		//
+		$('.spinner-overlay').show();
+
+		//
+		//	2.	Prevent the default form action so we can process the action
+		//		our way.
+		//
+		event.preventDefault();
+
+		//
+		//	3.	Build out the Cognito User from the data stored in the browser.
+		//
+		cognitoUser.getSession(function(error, result) {
+
+			//
+			//	1.	Check if there was an internal error.
+			//
+			if(error)
+			{
+				console.log(error);
+			}
+
+			//
+			//	2.	Remember the device.
+			//
+			cognitoUser.setDeviceStatusRemembered({
+				onSuccess: function (result) {
+
+					//
+					//	1.	Get the user attributes so we can check what type
+					//		of user logged in this way we can redirect it to
+					//		the right page.
+					//
+					cognitoUser.getUserAttributes(function (error, result) {
+
+						//
+						//	1.	Stop the spinner.
+						//
+						$('.spinner-overlay').hide();
+
+						//
+						//	2.	Check if there was an internal error.
+						//
+						if(error)
+						{
+							return console.error(error);
+						}
+
+						//
+						//	3.	Loop over all attributes.
+						//
+						for(i = 0; i < result.length; i++)
+						{
+							//
+							//	1. 	Look for the group attribute which tells
+							//		us, to which page the user belongs to.
+							//
+							if (result[i].getName() == 'custom:group')
+							{
+								//
+								//	1.	Get the URL from the array of possible
+								//		options.
+								//
+								let url = urls[result[i].getValue()];
+
+								//
+								//	->	Redirect to the Dashboard.
+								//
+								window.location.replace(url);
+							}
+						}
+
+					});
+
+				},
+				onFailure: function (error) {
+
+					console.error(error);
+
+					//
+					//	1.	Stop the spinner.
+					//
+					$('.spinner-overlay').hide();
+
+				}
+			});
+		});
+
+	});
+
+	//
+	//	Don't Remember the device.
+	//
+	$('#dont').click(function () {
+
+		//
+		//	1.	Start the loader.
+		//
+		$('.spinner-overlay').show();
+
+		//
+		//	2.	Prevent the default form action so we can process the action
+		//		our way.
+		//
+		event.preventDefault();
+
+		//
+		//	3.	Build out the Cognito User from the data stored in the browser.
+		//
+		cognitoUser.getSession(function (error, result) {
+
+			//
+			//	2.	Don't Remember the device.
+			//
+			cognitoUser.setDeviceStatusNotRemembered({
+				onSuccess: function (result) {
+
+					//
+					//	1.	Get the user attributes so we can check what type of
+					//		user logged in this way we can redirect it to the
+					//		right page.
+					//
+					cognitoUser.getUserAttributes(function (error, result) {
+
+						//
+						//	1.	Stop the spinner.
+						//
+						$('.spinner-overlay').hide();
+
+						//
+						//	2.	Check if there was an internal error.
+						//
+						if(error)
+						{
+							return console.error(error);
+						}
+
+						//
+						//	3.	Loop over all attributes.
+						//
+						for(i = 0; i < result.length; i++)
+						{
+							//
+							//	1. 	Look for the group attribute which tells
+							//		us, to which page the user belongs to.
+							//
+							if (result[i].getName() == 'custom:group')
+							{
+								//
+								//	1.	Get the URL from the array of possible
+								//		options.
+								//
+								let url = urls[result[i].getValue()];
+
+								//
+								//	->	Redirect to the Dashboard.
+								//
+								window.location.replace(url);
+							}
+						}
+
+					});
+
+				},
+				onFailure: function (error) {
+
+					console.error(error);
+
+					//
+					//	1.	Stop the spinner
+					//
+					$('.spinner-overlay').hide();
+
+				}
+			});
+
+		});
+
+	});
+
+</script>
